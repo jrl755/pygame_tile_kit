@@ -70,7 +70,10 @@ def test_by_category_and_by_size_and_by_tag_filter_correctly():
         "ground_large",
     }
     assert {m.tile_id for m in registry.by_size(TileSize.MEDIUM)} == {"hazard_medium"}
-    assert {m.tile_id for m in registry.by_tag("flat")} == {"ground_small", "ground_large"}
+    assert {m.tile_id for m in registry.by_tag("flat")} == {
+        "ground_small",
+        "ground_large",
+    }
 
 
 def test_compatible_filters_by_left_and_right_edge_independently():
@@ -90,8 +93,35 @@ def test_compatible_filters_by_left_and_right_edge_independently():
         )
     )
 
-    assert {m.tile_id for m in registry.compatible(left=EdgeType.SOLID)} == {"solid_both"}
+    assert {m.tile_id for m in registry.compatible(left=EdgeType.SOLID)} == {
+        "solid_both"
+    }
     assert {m.tile_id for m in registry.compatible(right=EdgeType.CLIMBABLE)} == {
+        "climbable_both"
+    }
+
+
+def test_compatible_filters_by_top_and_bottom_edge_independently():
+    registry: TileRegistry[str] = TileRegistry()
+    registry.register(
+        TileMetadata(
+            tile_id="solid_both",
+            payload="s",
+            edges=TileEdges(top=EdgeType.SOLID, bottom=EdgeType.SOLID),
+        )
+    )
+    registry.register(
+        TileMetadata(
+            tile_id="climbable_both",
+            payload="c",
+            edges=TileEdges(top=EdgeType.CLIMBABLE, bottom=EdgeType.CLIMBABLE),
+        )
+    )
+
+    assert {m.tile_id for m in registry.compatible(top=EdgeType.SOLID)} == {
+        "solid_both"
+    }
+    assert {m.tile_id for m in registry.compatible(bottom=EdgeType.CLIMBABLE)} == {
         "climbable_both"
     }
 
@@ -145,8 +175,12 @@ def test_exclude_tags_removes_matches():
 
 def test_stats_counts_total_and_per_category():
     registry: TileRegistry[str] = TileRegistry()
-    registry.register(TileMetadata(tile_id="a", payload="a", category=TileCategory.GROUND))
-    registry.register(TileMetadata(tile_id="b", payload="b", category=TileCategory.GROUND))
+    registry.register(
+        TileMetadata(tile_id="a", payload="a", category=TileCategory.GROUND)
+    )
+    registry.register(
+        TileMetadata(tile_id="b", payload="b", category=TileCategory.GROUND)
+    )
     registry.register(TileMetadata(tile_id="c", payload="c"))
 
     assert registry.stats() == {"total": 3, "ground": 2}

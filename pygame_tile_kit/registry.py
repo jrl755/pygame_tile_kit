@@ -14,10 +14,19 @@ from pygame_tile_kit.enums import EdgeType, TileCategory, TileSize, are_edges_co
 
 @dataclass(frozen=True)
 class TileEdges:
-    """A tile's left/right edge types, for edge-compatibility queries."""
+    """A tile's four edge types, for edge-compatibility queries.
+
+    top/bottom were added for grid-based, multi-cell-span consumers,
+    where vertical adjacency (what can stack above/below a tile) is as
+    meaningful as horizontal adjacency. Left/right-only consumers are
+    unaffected - both fields default to OPEN, which is compatible with
+    everything (see are_edges_compatible).
+    """
 
     left: EdgeType = EdgeType.OPEN
     right: EdgeType = EdgeType.OPEN
+    top: EdgeType = EdgeType.OPEN
+    bottom: EdgeType = EdgeType.OPEN
 
 
 @dataclass
@@ -68,6 +77,8 @@ class TileRegistry[T]:
         *,
         left: EdgeType | None = None,
         right: EdgeType | None = None,
+        top: EdgeType | None = None,
+        bottom: EdgeType | None = None,
         category: TileCategory | None = None,
         size: TileSize | None = None,
         tags: tuple[str, ...] = (),
@@ -76,9 +87,7 @@ class TileRegistry[T]:
         """Find tiles matching all given constraints."""
         result = []
         for t in self._tiles.values():
-            if left is not None and not are_edges_compatible(left, t.edges.left):
-                continue
-            if right is not None and not are_edges_compatible(t.edges.right, right):
+            if not self._edges_match(t.edges, left, right, top, bottom):
                 continue
             if category is not None and t.category != category:
                 continue
@@ -90,6 +99,28 @@ class TileRegistry[T]:
                 continue
             result.append(t)
         return result
+
+    @staticmethod
+    def _edges_match(
+        edges: TileEdges,
+        left: EdgeType | None,
+        right: EdgeType | None,
+        top: EdgeType | None,
+        bottom: EdgeType | None,
+    ) -> bool:
+        """Whether a tile's edges satisfy every given side constraint -
+        extracted from compatible() so adding top/bottom didn't just
+        duplicate the left/right branch shape twice over.
+        """
+        if left is not None and not are_edges_compatible(left, edges.left):
+            return False
+        if right is not None and not are_edges_compatible(edges.right, right):
+            return False
+        if top is not None and not are_edges_compatible(top, edges.top):
+            return False
+        if bottom is not None and not are_edges_compatible(edges.bottom, bottom):
+            return False
+        return True
 
     def stats(self) -> dict[str, int]:
         """Summary counts: total tiles + counts per category present."""
